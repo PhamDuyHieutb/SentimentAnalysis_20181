@@ -1,26 +1,43 @@
 import json
 import os
-import DataProcessor
+from DataProcessor import DataProcessor
 import math
+from random import shuffle
 
 PATHDATA_PROCESSED  =  "xxx"
 
 def read_file_json(path_file):
     with open(path_file, 'r') as content:
         data = json.load(content)
+    content.close()
     return data
 
 def read_file_text(path_file):
     with open(path_file, 'r') as content:
         data = content.read()
+    content.close()
     return data
 
-def write_file(data, path_file):
-    with open(path_file, 'w') as outfile:
-        json.dump(data, outfile)
+def read_file_text_by_lines(path_file):
+    with open(path_file, 'r') as content:
+        data = content.readlines()
+    content.close()
+    return data
+
+
+def write_file_json(data, path_file):
+    outfile = open(path_file, 'w')
+    json.dump(data, outfile)
+    outfile.close()
+
+def write_file_text(data, path_file):
+    out = open(path_file, 'w')
+    out.write(data)
+    out.close()
+
 
 def make_label(stars):
-    if int(stars) > 3:
+    if int(float(stars)) > 3:
         return 1
     else:
         return 0
@@ -46,13 +63,6 @@ def tf_idf(word, current_doc, documents):
 
     return tf * idf
 
-
-def convertDataToFormOfSVM(path_data):
-    data_processed = read_file_json(path_data)
-    for i in data_processed:
-        label = make_label(i['rating'])
-
-
 def make_dictionary(path_data_processed):
     all_word = []
     words = []
@@ -75,7 +85,7 @@ def make_dictionary(path_data_processed):
 
         for j in range(len(words[i])):
             freq[words[i][j]] += 1     # tinh tan so cua cac tu
-        write_file(freq, "count_words")
+        write_file_json(freq, "count_words")
 
         new_line = []
         for word in list_words:  # tinh tf-idf cho cac tu trong 1 review
@@ -86,37 +96,74 @@ def make_dictionary(path_data_processed):
 
     dictionary = set(all_word)
     print("leng dict" , len(dictionary))
-    with open("dictionary", 'w') as writs:
-        writs.write(', '.join(dictionary))
-
-    print(dictionary)
-    # filter review with dictionary
-    for file in list_files:
-        temp = []
-        path_file = path_data_processed + f"/{file}"
-        data_processed = read_file_json(path_file)
-        for revw in data_processed:
-            arr_text = revw['review_body'].strip().split(' ')
-            print(arr_text)
-            elements_in_both_lists = [w for w in arr_text if w in dictionary]
-            temp.append((revw['rating'], elements_in_both_lists))
-        write_file(temp, f"/datatrain_processed/{file}")
+    write_file_text(', '.join(dictionary), 'dictionary')
 
 
+def filterDataByDictAndClassify(path_data, path_write, path_dictionary):
 
-def filterDataTestByDict(path_data_test,path_dict):
-    dictionary = read_file_text(path_dict)
-    list_files = os.listdir(path_data_test)
-    for file in list_files:
-        temp = []
-        path_file = path_data_test + f"/{file}"
-        data_processed = read_file_json(path_file)
-        for revw in data_processed:
-            arr_text = revw['review_body'].strip().split(' ')
-            print(arr_text)
-            elements_in_both_lists = [w for w in arr_text if w in dictionary]
-            temp.append((revw['rating'], elements_in_both_lists))
-        write_file(temp, f"/datatest_processed/{file}")
+    dictionary = read_file_text(path_dictionary)
+    list_files = os.listdir(path_data)
+    for label in range(0,2):
+        data = []
+        for file in list_files:
+            path_file = path_data + f"/{file}"
+            data_processed = read_file_json(path_file)
+            for revi in data_processed:
+                arr_text = revi['review_body'].strip().split(' ')
+                elements_in_both_lists = [w for w in arr_text if w in dictionary]
+                if make_label(revi['rating']) == label:
+                    data.append(" ".join(elements_in_both_lists))
+            write_file_text('\n'.join(data), path_write + f"/label_{label}")
+
 
 dataprocessor = DataProcessor()
 
+def transformToTfidf(path_data):
+
+    corpus = []
+    labels  = []
+
+
+    list_files = os.listdir(path_data)
+    for file_name in list_files:
+        label = file_name.split("_")[1]
+        dataByLabel = read_file_text_by_lines(path_data + f"/{file_name}")
+        for revi in dataByLabel:
+            labels.append(label)
+            corpus.append(revi)
+    tfidf = dataprocessor.fit(corpus)
+    return tfidf, labels
+
+def convert(input, output):
+    all_data = []
+    for revi, label in input:
+        label_revi = str(label)
+        index = -1
+        for tfidf in revi:
+            index += 1
+            if tfidf != 0:
+                feature = str(index) + ":" + str(tfidf)
+                label_revi = label_revi + " " + feature
+        if len(label_revi.split(" ")) > 3:
+            all_data.append(label_revi)
+    write_file_text('\n'.join(all_data), output)
+
+def convertDataToFormOfSVM(path_data, output):
+    revi, label = transformToTfidf(path_data)
+    input_train = list(zip(revi, label))
+    #shuffle(input_train)
+
+    convert(input_train, output)
+
+
+
+def main():
+    make_dictionary("train")
+    filterDataByDictAndClassify("train", "data_filtered_by_dict/train", "dictionary")
+    filterDataByDictAndClassify("test", "data_filtered_by_dict/test", "dictionary")
+    convertDataToFormOfSVM("data_filtered_by_dict/train", "datatrainsvm")
+    #convertDataToFormOfSVM("data_filtered_by_dict/test", "datatestsvm")
+
+
+if __name__ == '__main__':
+    main()
