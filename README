@@ -13,13 +13,11 @@ Sentiment Analysis for Amazon reviews
 
 
 ++++  Electronic (75k) ++++
-* lần 3: xử lý thêm number star
+* lần 3: xử lý neagtion
 0.7958992683341841
 [[3249  671   70]
  [ 942 2495  417]
  [  43  256 3611]]
-
-=> tiếp tục xử lý vấn đề tại sao sai sau khi có kết quả
 
 * lần 4 sau khi xử lý number star => kết quả giảm 1% (có thể do dữ liệu nhiều hơn)
 
@@ -28,8 +26,6 @@ Sentiment Analysis for Amazon reviews
  [1124 3157  565]
  [  79  289 4555]]
 
-
-=> sai vị trí xét so sánh
 
 * lần 5 : sửa lỗi star và một số thành phần còn sót
 average 0.8047857239421387
