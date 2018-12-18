@@ -1,17 +1,11 @@
-import os
-import re
 from fileio import FileIO
 from nltk import word_tokenize
-from dataprocessor import DataProcessor
-from scipy import sparse
-from random import shuffle
-from sklearn.model_selection import train_test_split
-from nltk.stem.wordnet import WordNetLemmatizer
-from nltk.stem.lancaster import LancasterStemmer
 from preprocess import Clean
 
 io = FileIO()
 clean = Clean()
+
+# get reviews failed to judge reasons
 
 def make_label(stars):
     if int(float(stars)) > 3:

@@ -37,13 +37,5 @@ def train_test():
             print("The best param are %s with a score of %0.2f" % (grid.best_params_, grid.best_score_))
 
 
-    # svc = SVC(gamma= 'scale')
-    # parameters = {'kernel': ('rbf','linear'), 'C': [1, 10]}
-    # clf = GridSearchCV(svc, parameters , cv=5)
-    # clf.fit(X_train, Y_train)
-    # sorted(clf.cv_results_.keys())
-    # dump(clf, "clf")
-
-
 
 train()
