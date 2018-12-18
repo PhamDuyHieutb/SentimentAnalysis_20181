@@ -13,10 +13,6 @@ from preprocess import Clean
 io = FileIO()
 clean = Clean()
 
-
-
-
-
 def make_label(stars):
     if int(float(stars)) > 3:
         return 2     # positive
@@ -91,11 +87,14 @@ def process_test_data_for_fail_reviews():
 
 Y_test = io.read_file_text("data/datatestsvm_label1").split("\n")
 
-filterTestDataByDict("data/data_raw/test_raw/test.json", "data/result_test/test_raw", "data/result_test/test_clean",'dictionary')
-predict = io.read_file_text('data/result_test/predict_label').split("\n")
+#filterTestDataByDict("data/data_raw/test_raw/test.json", "data/result_test/test_raw", "data/result_test/test_clean",'dictionary')
+predict = io.read_file_text('data/predict_label').split("\n")
 index_fail = get_index_fail(predict, Y_test)
 
 corpus_raw = io.read_file_text("data/result_test/test_raw").split("\n")
 corpus_clean = io.read_file_text("data/result_test/test_clean").split("\n")
 
 get_reviews_fail(index_fail, corpus_raw, corpus_clean)
+
+
+

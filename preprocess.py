@@ -1,7 +1,7 @@
 '''
 divide data raw to train and test part
-make dictionary
-filter data with that dictionary
+make bagofwords
+filter data with that bagofwords
 convert data to form of libsvm
 '''
 import os
@@ -53,26 +53,27 @@ class Clean:
         stops = io.read_file_text("stopwords").strip().split("\n")
         meaningful_words = [w for w in token_review if w.lower() not in stops]
         stem = []
+        # negation process
+        listwords_negation_processed = self.negation_process(meaningful_words, "negation")
 
-        for w in meaningful_words:
-            st = stemmer.stem(lematizer.lemmatize(w.lower()))
+        for w in listwords_negation_processed:
+            st = stemmer.stem(lematizer.lemmatize(w.lower(), pos = 'v'))
             stem.append(st)
 
         return " ".join(stem)
 
-    def negation_process(self, review, path_negation_words):
+
+    def negation_process(self, listwords, path_negation_words):
 
         """
-        :param review: input single review
-        :return: review which was handled about negaion word
+        concat not_ with next word of negation words
         """
 
         list_negation = io.read_file_text(path_negation_words).split("\n")
-        list_words_before = review.strip().split(' ')
         list_words_after = []
         temp_word = ''
-        for w in list_words_before:
-            if w.strip() in list_negation:
+        for w in listwords:
+            if w in list_negation and temp_word != "not":
                 temp_word = "not"
             else:
                 if temp_word == "not":
@@ -80,7 +81,8 @@ class Clean:
                     temp_word = ''
                 list_words_after.append(w)
 
-        return " ".join(list_words_after)
+        return list_words_after
+
 
     def number_process(self, review):
         """
@@ -110,23 +112,23 @@ class Clean:
 clean = Clean()
 
 
-def preprocess_corpus(path_data, output_processed_negation_number, path_negation_words):
+def preprocess_corpus(path_data, output_processed_negation_number):
     """
     clean data and negation handling
     """
 
     data = io.read_file_json(path_data)
     for re in data:
-        content = clean.negation_process( clean.clean_review(re['review_body'].strip()), path_negation_words)
+        content = clean.clean_review(re['review_body'].strip())
         content_num_proces = clean.number_process(content)
         re['review_body'] = content_num_proces
 
     io.write_file_json(data, output_processed_negation_number)
 
-def make_dictionary(path_traindata_processed):
+def make_bag_of_words(path_traindata_processed):
 
     '''
-    :return: dictionary after filter redundant
+    :return: bag of words after filter redundant
     '''
 
     all_word = []
@@ -148,42 +150,39 @@ def make_dictionary(path_traindata_processed):
 
         for j in range(len(words[i])):  # test lai
             freq[words[i][j]] += 1     # tinh tan so cua cac tu
-        review = [w for w in list_words if freq[w] > 1 and freq[w] < 20000]   # remove words which has frequent <= 4
+        review = [w for w in list_words if freq[w] > 1 and freq[w] < 25000]   # remove words which has frequent <= 4
 
         new_line = []
 
         for word in review:
-            # tinh tf-idf cho cac tu trong 1 review
-            # value = tf_idf(word, words[i], words)
-            # if value >= 2e-05:   # can test lai
             new_line.append(word)
             all_word += new_line
 
-    dictionary = set(all_word)
-    print("leng dict before " , len(dictionary))
+    bagOfWords = set(all_word)
+    print("leng dict before " , len(bagOfWords))
 
     listwordremoved = []
-    for word in dictionary:
+    for word in bagOfWords:
         count = 0
         for re in words:
             for w in re:
                 if word == w:
                     count += 1
                     break
-        if count > 12000 or count < 4:
+        if count > 35000 or count < 3:
             listwordremoved.append(word)
     for w in listwordremoved:
-        dictionary.remove(w)
+        bagOfWords.remove(w)
 
-    print("length dict after ", len(dictionary))
-    io.write_file_text('\n'.join(listwordremoved), 'removed')
-    io.write_file_text(', '.join(dictionary), 'dictionary')
+    print("length dict after ", len(bagOfWords))
+    io.write_file_text('\n'.join(listwordremoved), 'words_removed')
+    io.write_file_text(', '.join(bagOfWords), 'bagofwords')
 
-def filterTestDataByDict(path_file, path_write_raw, path_write_clean, path_dictionary):
+def filterTestDataByBagOfWords(path_file, path_write_raw, path_write_clean, path_bagofwords):
     """
-    :return: filter data by dictionary
+    :return: filter data by bag of words
     """
-    dictionary = io.read_file_text(path_dictionary).split(", ")
+    bagOfWords = io.read_file_text(path_bagofwords).split(", ")
 
     corpus = []
     corpus_raw = []
@@ -195,9 +194,9 @@ def filterTestDataByDict(path_file, path_write_raw, path_write_clean, path_dicti
 
     for star, revi in corpus:
         label = make_label(star)
-        rev_clean = clean.number_process(clean.negation_process(clean.clean_review(revi), 'negation'))
+        rev_clean = clean.number_process(clean.clean_review(revi))
         arr_word  = word_tokenize(rev_clean)
-        elements_in_both_lists = [w for w in arr_word if w in dictionary]
+        elements_in_both_lists = [w for w in arr_word if w in bagOfWords]
         if len(elements_in_both_lists) > 0:
             corpus_raw.append((label, revi))
             corpus_clean.append((label, rev_clean))
@@ -206,16 +205,20 @@ def filterTestDataByDict(path_file, path_write_raw, path_write_clean, path_dicti
     io.write_tuple_data(corpus_clean, path_write_clean)
 
 
-def filterDataByDictAndClassify(path_file, path_write, path_dictionary):
+def filterTrainDataByBagOfWordsAndClassify(path_file, path_write, path_bagofwords):
 
-    dictionary = io.read_file_text(path_dictionary).split(", ")
+    """
+    filter train data by bag of words and classify to 3 label 0, 1, 2
+    """
+
+    bagOfWords = io.read_file_text(path_bagofwords).split(", ")
     data_0 = []
     data_1 = []
     data_2 = []
     data_processed = io.read_file_json(path_file)
     for revi in data_processed:
         arr_text = str(revi['review_body']).strip().split(' ')
-        elements_in_both_lists = [w for w in arr_text if w in dictionary]
+        elements_in_both_lists = [w for w in arr_text if w in bagOfWords]
         label = make_label(revi['rating'])
         if len(elements_in_both_lists) > 0:
             if label == 2:
@@ -264,21 +267,26 @@ def transformToTfidf(path_data, type_data):
 
     return tfidf, labels
 
-def convert(input, output):
-    all_data = []
-    for revi, label in input:
-        label_revi = str(label)
-        index = -1
-        for tfidf in revi:
-            index += 1
-            if tfidf != 0:
-                feature = str(index) + ":" + str(tfidf)
-                label_revi = label_revi + " " + feature
-        if len(label_revi.split(" ")) > 1:   # has min 1 feature
-            all_data.append(label_revi)
-    io.write_file_text('\n'.join(all_data), output)
+# def convert(input, output):
+#     all_data = []
+#     for revi, label in input:
+#         label_revi = str(label)
+#         index = -1
+#         for tfidf in revi:
+#             index += 1
+#             if tfidf != 0:
+#                 feature = str(index) + ":" + str(tfidf)
+#                 label_revi = label_revi + " " + feature
+#         if len(label_revi.split(" ")) > 1:   # has min 1 feature
+#             all_data.append(label_revi)
+#     io.write_file_text('\n'.join(all_data), output)
 
 def convertDataToFormOfSVM(path_file, output_revi, output_label, type):
+
+    """
+    transform data to tfidf and map to sparse vector
+    """
+
     revi, label = transformToTfidf(path_file,type)
     sparse.save_npz(output_revi, sparse.csr_matrix(revi))
     io.write_file_text('\n'.join(label), output_label)
@@ -291,13 +299,12 @@ def split_train_test(path_data, output_train, output_test):
     io.write_file_json(test_data, output_test)
 
 
-def spelling_Check(list_reviews, output):
-    for review in list_reviews:
-        list_words = review.strip().split(' ')
-        for w in list_words:
-            pass
-
 def balanceReviews(path_all_data, path_balance_data):
+
+    """
+    balace num of reviews in each label
+    """
+
     data = io.read_multi_files_json(path_all_data)
     data_sample = []
     count = 0
@@ -336,24 +343,25 @@ def balanceReviews(path_all_data, path_balance_data):
 
 def main():
 
-    # balanceReviews("data/data_raw/electronic","data/data_raw/elec_balance.json")
+    balanceReviews("/home/hieupd/PycharmProjects/data_for_sentiment/electronic","data/data_raw/elec_balance.json")
+
+    # split train test before clean
+    print("split")
+    split_train_test("data/data_raw/elec_balance.json", "data/data_raw/train.json", "data/data_raw/test.json")
+
+    # preprocess train and test data
+    print("preprocess")
+    preprocess_corpus("data/data_raw/train.json","data/data_processed/elec_clean_train.json")
+    make_bag_of_words("data/data_processed/elec_clean_train.json")
     #
-    # # split train test before clean
-    # print("split")
-    # split_train_test("data/data_raw/elec_balance.json", "data/data_raw/train.json", "data/data_raw/test.json")
-    #
-    # # preprocess train and test data
-    # print("preprocess")
-    # preprocess_corpus("data/data_raw/train.json","data/data_processed/elec_clean_train.json", "negation")
-    # make_dictionary("data/data_processed/elec_clean_train.json")
-    # #
-    # print("filter")
-    filterDataByDictAndClassify("data/data_processed/elec_clean_train.json", "data/data_filtered_by_dict/train", "dictionary")
-    #filterTestDataByDict("data/data_raw/test.json", "data/data_raw/test_raw_for_fail_check", "data/data_filtered_by_dict/test_filter", "dictionary")
+    print("filter")
+    filterTrainDataByBagOfWordsAndClassify("data/data_processed/elec_clean_train.json", "data/data_filtered_by_dict/train", "bagofwords")
+    filterTestDataByBagOfWords("data/data_raw/test.json", "data/data_raw/test_raw_for_fail_check", "data/data_filtered_by_dict/test_filter", "bagofwords")
     #
     print("convert to svm form")
     convertDataToFormOfSVM("data/data_filtered_by_dict/train", "data/datatrainsvm1.npz",  "data/datatrainsvm_label1",'train')
     convertDataToFormOfSVM("data/data_filtered_by_dict/test_filter", "data/datatestsvm1.npz", 'data/datatestsvm_label1', 'test')
+
 
 if __name__ == '__main__':
     main()

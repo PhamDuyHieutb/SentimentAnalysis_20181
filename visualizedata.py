@@ -47,7 +47,7 @@ def plot_confusion_matrix(cm,classes,normalize=False,cmap = plt.cm.Blues):
     print(cm)
 
     plt.imshow(cm,interpolation= 'nearest',cmap=cmap)
-    plt.title("Confusion matrix")
+    plt.title("Electronic")
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks,classes,rotation = 90)
@@ -93,7 +93,8 @@ def main():
 
     # reload = load('model_test')
     # Y_predict = reload.predict(X_test)
-    # io.write_file_text("\n".join(Y_predict), "data/predict_label")
+    # io.write_file_text("\n".join(Y_predict), "data/predict_label"
+
     Y_predict = io.read_file_text("data/predict_label").split("\n")
 
     # print("score")
@@ -106,7 +107,7 @@ def main():
 
 
     plt.figure()
-    plot_confusion_matrix(cfm, classes=classes, normalize=False)
+    plot_confusion_matrix(cfm, classes=classes, normalize=True)
     plt.show()
 
 
