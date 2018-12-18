@@ -1,32 +1,18 @@
 Sentiment Analysis for Amazon reviews 
 *Chú thích:
-+ preprocess.py : tiền xử lý dữ liệu, tạo dictionary
++ preprocess.py : tiền xử lý dữ liệu, tạo bag of words
 + dataprocessor.py : transform data to tfidf
 + fileio.py : chứa các fuction cho đọc ghi file 
-+ main.py : chứa hàm predict để demo với document input
++ demo.py : chứa hàm predict để demo với document input
 + visualizedata.py : đánh giá kết quả mô hình, show confusion matrix
-+ dictionary : bộ từ điển
++ bagofwords : bộ từ điển
 + negation : tập từ negation được đưa vào đánh giá
 + feature.pkl : lưu bộ feature sau khi tạo từ điển với tập train
-+ removed : các từ bị xóa trong quá trình tạo từ điển 
++ words_removed : các từ bị xóa trong quá trình tạo từ điển 
 + stopwords: bộ từ dừng
 
 
 ++++  Electronic (75k) ++++
-* lần 3: xử lý neagtion
-0.7958992683341841
-[[3249  671   70]
- [ 942 2495  417]
- [  43  256 3611]]
-
-* lần 4 sau khi xử lý number star => kết quả giảm 1% (có thể do dữ liệu nhiều hơn)
-
-0.7857384938656544
-[[3880  978  126]
- [1124 3157  565]
- [  79  289 4555]]
-
-
 * lần 5 : sửa lỗi star và một số thành phần còn sót
 average 0.8047857239421387
 recall 0.8035723274801244
