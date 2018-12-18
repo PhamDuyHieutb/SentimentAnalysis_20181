@@ -7,8 +7,8 @@ Sentiment Analysis for Amazon reviews
 + visualizedata.py : đánh giá kết quả mô hình, show confusion matrix
 + bagofwords : bộ từ điển
 + negation : tập từ negation được đưa vào đánh giá
-+ feature.pkl : lưu bộ feature sau khi tạo từ điển với tập train
-+ words_removed : các từ bị xóa trong quá trình tạo từ điển 
++ feature.pkl : lưu bộ feature sau khi tạo bag of words với tập train
++ words_removed : các từ bị xóa trong quá trình tạo bag of words
 + stopwords: bộ từ dừng
 
 
